@@ -1,28 +1,23 @@
 <?php
 include 'functions.php';
 $pdo = pdo_connect();
+
 session_start();
 
-if (empty($_SESSION['key']))
-	$_SESSION['key'] = bin2hex(rand(100000, 999999));
+function csrf_token() {
+    return bin2hex(rand(100000, 999999));
+}
 
-$csrf = hash_hmac('sha256','this is some string: index.php', $_SESSION['key']);
+function create_csrf_token() {
+    $token = csrf_token();
+    $_SESSION['csrf_token'] = $token;
+    $_SESSION['csrf_token_time'] = time();
+    return $token;
+}
 
-
-if (isset($_POST['submit'])) {
-	if (hash_equals($csrf, $_POST['csrf'])){
-		if (!empty($_POST)) {
- 		   	$name = $_POST['name'];
-		   	$email = $_POST['email'];
-			$phone = $_POST['phone'];
-    			$title = $_POST['title'];
-    			$created = date('Y-m-d H:i:s');
-    			// Insert new record into the contacts table
-    			$stmt = $pdo->prepare('INSERT INTO contacts VALUES (?, ?, ?, ?, ?, ?)');
-   			$stmt->execute([$id, $name, $email, $phone, $title, $created]);
-    			header("location:index.php");
-		}
-	}
+function csrf_token_tag() {
+    $token = create_csrf_token();
+    return '<input type="hidden" name="csrf_token" value="' . $token . '">';
 }
 
 ?>
@@ -43,11 +38,12 @@ if (isset($_POST['submit'])) {
         <div class="card">
         <div class="card-body">
         <h5 class="card-title">Create contact</h5>
-                    <form action="create.php" method="post">
+                    <form action="response1.php" method="post">
                         <input class="form-control form-control-sm" placeholder="Type name" type="text" name="name" id="name" required><br>
                         <input class="form-control form-control-sm" placeholder="Email" type="text" name="email" id="email" required><br>
                         <input class="form-control form-control-sm" placeholder="Phone number" type="text" name="phone" id="phone" required><br>
                         <input class="form-control form-control-sm" placeholder="Title" type="text" name="title" id="title" required><br>
+                        <?php echo csrf_token_tag(); ?>
                         <input class="btn btn-primary btn-sm" type="submit" value="Create">
                         <a href="index.php" type="button" class="btn btn-warning btn-sm">Cancel</a>
                     </form>

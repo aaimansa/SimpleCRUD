@@ -19,7 +19,23 @@
 </body>
 </html>
 <?php
+session_start();
 
+function csrf_token() {
+    return bin2hex(rand(100000, 999999));
+}
+
+function create_csrf_token() {
+    $token = csrf_token();
+    $_SESSION['csrf_token'] = $token;
+    $_SESSION['csrf_token_time'] = time();
+    return $token;
+}
+
+function csrf_token_tag() {
+    $token = create_csrf_token();
+    return '<input type="hidden" name="csrf_token" value="' . $token . '">';
+}
 $pdo = pdo_connect();
 $stmt = $pdo->prepare('SELECT * FROM contacts');
 $stmt->execute();

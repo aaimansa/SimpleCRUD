@@ -2,39 +2,35 @@
 
 include 'functions.php';
 $pdo = pdo_connect();
+
 session_start();
 
-if (empty($_SESSION['key']))
-	$_SESSION['key'] = bin2hex(rand(100000, 999999));
-
-$csrf = hash_hmac('sha256', 'this is some string: index.php', $_SESSION['key']);
-
-if (isset($_POST['submit'])) {
-	if (hash_equals($csrf, $_POST['csrf'])){
-	    	if (!empty($_POST)) {
-        		$name = $_POST['name'];
-		        $email = $_POST['email'];
-		        $phone = $_POST['phone'];
-		        $title = $_POST['title'];
-		        // Insert new record into the contacts table
-		        $stmt = $pdo->prepare('UPDATE contacts SET name = ?, email = ?, phone = ?, title = ? WHERE id = ?');
-		        $stmt->execute([$name, $email, $phone, $title, $_GET['id']]);
-		        header("location:index.php");
-    		}
-	} else {
-		echo 'CSRF Token Failed!';
-	}
+function csrf_token() {
+    return bin2hex(rand(100000, 999999));
 }
 
-//    $stmt = $pdo->prepare('SELECT * FROM contacts WHERE id = ?');
-//    $stmt->execute([$_GET['id']]);
-//    $contact = $stmt->fetch(PDO::FETCH_ASSOC);
-//    if (!$contact) {
-//        die ('Contact doesn\'t exist!');
-//    }
-//} else {
-//    die ('No ID specified!');
-//}
+function create_csrf_token() {
+    $token = csrf_token();
+    $_SESSION['csrf_token'] = $token;
+    $_SESSION['csrf_token_time'] = time();
+    return $token;
+}
+
+function csrf_token_tag() {
+    $token = create_csrf_token();
+    return '<input type="hidden" name="csrf_token" value="' . $token . '">';
+}
+
+if (isset($_GET['id'])) {
+    $stmt = $pdo->prepare('SELECT * FROM contacts WHERE id = ?');
+    $stmt->execute([$_GET['id']]);
+    $contact = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$contact) {
+        die ('Contact doesn\'t exist!');
+    }
+} else {
+    die ('No ID specified!');
+}
 
 ?>
 <!DOCTYPE html>
@@ -55,11 +51,12 @@ if (isset($_POST['submit'])) {
             <h5 class="card-title">Update contact # <?=$contact['id']?></h5>                    
                 
                 
-                <form action="update.php?id=<?=$contact['id']?>" method="post">
+                <form action="response2.php?id=<?=$contact['id']?>" method="post">
                     <input class="form-control form-control-sm" placeholder="Type name" type="text" name="name" value="<?=$contact['name']?>" id="name" required><br>
                     <input class="form-control form-control-sm" placeholder="Email" type="text" name="email" value="<?=$contact['email']?>" id="email" required><br>
                     <input class="form-control form-control-sm" placeholder="Phone number" type="text" name="phone" value="<?=$contact['phone']?>" id="phone"><br>
                     <input class="form-control form-control-sm" placeholder="Title" type="text" name="title" value="<?=$contact['title']?>" id="title"><br>
+                    <?php echo csrf_token_tag(); ?>
                     <input class="btn btn-primary btn-sm" type="submit" value="Update">
                     <a href="index.php" type="button" class="btn btn-warning btn-sm">Cancel</a>
                     
